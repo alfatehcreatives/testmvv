@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project: Making The Vision, Visible (Cloud Sync)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --neon-red: #dc2626;
+        }
+        body {
+            background-color: #000;
+            color: #d4d4d8; /* zinc-300 */
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .text-shadow-red {
+            text-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+        }
+        .glow-hover:hover {
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.2);
+            border-color: #dc2626;
+        }
+        .tracker-btn.active {
+            background-color: #dc2626;
+            color: black;
+            box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+            border-color: #dc2626;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #450a0a; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #dc2626; 
+        }
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-red-900 selection:text-white">
+
+    <!-- Sticky Header -->
+    <header class="sticky top-0 z-50 bg-black/95 backdrop-blur-md border-b border-red-900/50">
+        <div class="w-full px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="relative w-12 h-12 bg-zinc-900 border border-red-800 rounded-sm flex items-center justify-center overflow-hidden cursor-pointer group" id="logo-container">
+                    <img id="logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+                    <i data-lucide="target" class="text-red-600 w-6 h-6 group-hover:scale-110 transition-transform" id="logo-icon"></i>
+                    
+                    <!-- Logo Input Dropdown -->
+                    <div id="logo-input-wrapper" class="hidden absolute top-full left-0 mt-2 bg-black border border-red-800 p-2 z-50 w-64 shadow-xl">
+                         <input type="text" id="logo-url-input" placeholder="Paste Image URL & Enter" class="w-full bg-zinc-900 text-xs p-1 text-red-500 focus:outline-none border border-zinc-800 focus:border-red-600">
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white">
+                        Project: <span class="text-red-600 text-shadow-red">Making The Vision, Visible</span>
+                    </h1>
+                    <div class="flex items-center gap-4 text-xs font-mono text-red-500/70">
+                        <span>11 WEEKS</span>
+                        <span>•</span>
+                        <span>77 DAYS</span>
+                        <span>•</span>
+                        <span>TOTAL DOMINATION</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Stats & Data Management -->
+            <div class="flex items-center gap-6 md:ml-auto w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs uppercase text-zinc-500 tracking-wider">Posts</span>
+                    <span class="text-xl font-bold text-red-500"><span id="total-posts">0</span><span class="text-zinc-700 text-sm">/77</span></span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-xs uppercase text-zinc-500 tracking-wider">Reels</span>
+                    <span class="text-xl font-bold text-red-500"><span id="total-reels">0</span><span class="text-zinc-700 text-sm">/77</span></span>
+                </div>
+                <div class="w-px h-8 bg-zinc-800"></div>
+                <div class="flex flex-col items-end min-w-[80px]">
+                    <span class="text-xs uppercase text-zinc-500 tracking-wider">Progress</span>
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="trending-up" class="text-red-600 w-4 h-4"></i>
+                        <span class="text-xl font-bold text-white"><span id="global-progress">0</span>%</span>
+                    </div>
+                </div>
+                
+                <div class="w-px h-8 bg-zinc-800"></div>
+
+                <!-- Status Display -->
+                <div class="flex flex-col items-end min-w-[100px]">
+                    <span class="uppercase tracking-wider text-zinc-500 text-xs">User ID</span>
+                    <span id="user-id-display" class="font-mono text-zinc-500 text-xs whitespace-nowrap overflow-hidden text-ellipsis w-32">...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full h-1 bg-zinc-900">
+            <div id="progress-bar-fill" class="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.8)] transition-all duration-1000 ease-out" style="width: 0%"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="w-full p-4 md:p-6 lg:p-8 flex-grow">
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="flex flex-col items-center justify-center py-20 text-red-600">
+            <i data-lucide="loader" class="w-12 h-12 loading-pulse"></i>
+            <p class="mt-4 tracking-widest uppercase text-sm">Connecting to Vision Sync...</p>
+            <p id="auth-status" class="mt-2 text-xs text-zinc-500">Authenticating user...</p>
+        </div>
+        <div id="weeks-grid" class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 hidden">
+            <!-- Week Cards will be injected here -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-8 text-center border-t border-zinc-900 bg-black mt-auto">
+        <p class="text-zinc-700 text-xs uppercase tracking-[0.2em]">
+            Vision is the art of seeing what is invisible to others.
+        </p>
+        <div class="mt-4 flex justify-center items-center gap-2 text-red-400/80 text-xs">
+            <i data-lucide="cloud" class="w-3 h-3"></i>
+            <span>Data synchronized via Google Firestore.</span>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+
+        // Enable debug logging for Firebase
+        setLogLevel('Debug');
+
+        // --- Firebase Initialization and Globals ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- App Global Variables ---
+        let weeksData = [];
+        const DATA_DOC_ID = 'weeks_dashboard_document'; // Document ID
+        const DATA_COLLECTION_ID = 'vision_data'; // New Collection ID to fix the path depth
+        const LOGO_STORAGE_KEY = 'project_vision_logo'; // Still use local storage for non-essential logo state
+        
+        // --- DOM Elements ---
+        const grid = document.getElementById('weeks-grid');
+        const loading = document.getElementById('loading-indicator');
+        const authStatusEl = document.getElementById('auth-status');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const totalPostsEl = document.getElementById('total-posts');
+        const totalReelsEl = document.getElementById('total-reels');
+        const globalProgressEl = document.getElementById('global-progress');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        
+        // Logo Logic DOM 
+        const logoContainer = document.getElementById('logo-container');
+        const logoInputWrapper = document.getElementById('logo-input-wrapper');
+        const logoUrlInput = document.getElementById('logo-url-input');
+        const logoImg = document.getElementById('logo-img');
+        const logoIcon = document.getElementById('logo-icon');
+
+        // --- Custom Message Box (Replaces alert()) ---
+        function alertMessage(message, type = "info") {
+            const container = document.createElement('div');
+            container.className = `fixed top-4 right-4 z-[100] p-4 rounded-lg shadow-xl text-sm text-white transition-all duration-300 transform translate-y-0 opacity-100`;
+            container.style.backgroundColor = type === "success" ? "rgba(22, 163, 74, 0.9)" : "rgba(220, 38, 38, 0.9)";
+            container.innerText = message;
+            
+            document.body.appendChild(container);
+
+            setTimeout(() => {
+                container.classList.add('translate-y-[-20px]', 'opacity-0');
+                container.addEventListener('transitionend', () => container.remove());
+            }, 3000);
+        }
+
+        // --- Logo Logic (Local Storage) ---
+        function setupLogoLogic() {
+            logoContainer.addEventListener('click', (e) => {
+                if(e.target !== logoUrlInput) {
+                    logoInputWrapper.classList.toggle('hidden');
+                }
+            });
+
+            logoUrlInput.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
+                    const url = e.target.value;
+                    if(url) {
+                        logoImg.src = url;
+                        logoImg.classList.remove('hidden');
+                        logoIcon.classList.add('hidden');
+                        localStorage.setItem(LOGO_STORAGE_KEY, url);
+                    }
+                    logoInputWrapper.classList.add('hidden');
+                }
+            });
+
+            const savedLogo = localStorage.getItem(LOGO_STORAGE_KEY);
+            if(savedLogo) {
+                logoImg.src = savedLogo;
+                logoImg.classList.remove('hidden');
+                logoIcon.classList.add('hidden');
+            }
+        }
+
+        // --- Data Structure & Path ---
+        function getDataDocRef() {
+            if (!db || !userId) return null;
+            // CORRECTED Private data path (even number of segments: 6): 
+            // /artifacts/{appId}/users/{userId}/vision_data/{weeks_dashboard_document}
+            return doc(db, 'artifacts', appId, 'users', userId, DATA_COLLECTION_ID, DATA_DOC_ID);
+        }
+
+        /**
+         * Initializes default data structure for 11 weeks.
+         */
+        function initializeDefaultData() {
+            const defaultData = [];
+            const today = new Date();
+
+            for (let i = 1; i <= 11; i++) {
+                const docId = `week_${i.toString().padStart(2, '0')}`;
+                
+                // Calculate start and end dates for the week
+                const start = new Date(today);
+                start.setDate(today.getDate() + (i - 1) * 7);
+                const end = new Date(start);
+                end.setDate(end.getDate() + 6);
+
+                // Format dates (e.g., "1 Dec - 7 Dec")
+                const dateStr = `${start.getDate()} ${start.toLocaleString('default', { month: 'short' })} - ${end.getDate()} ${end.toLocaleString('default', { month: 'short' })}`;
+
+                defaultData.push({
+                    id: docId,
+                    regionName: `Week ${i} Region`,
+                    dates: dateStr,
+                    posts: Array(7).fill(0), // 0 or 1 for done/not done
+                    reels: Array(7).fill(0), // 0 or 1 for done/not done
+                    niches: ['', '', ''],
+                    projects: [{name:'', link:''}, {name:'', link:''}, {name:'', link:''}],
+                    outreach: '',
+                    results: '',
+                    engagement: '',
+                    observations: ''
+                });
+            }
+            return defaultData;
+        }
+        
+        // --- Data Persistence Logic (via Firestore) ---
+
+        /**
+         * Saves the complete weeks data array to Firestore.
+         */
+        async function saveWeeksData(newWeeksData) {
+            if (!isAuthReady || !userId) {
+                console.error("Cannot save data: Authentication not ready.");
+                alertMessage("Sync failed: Not authenticated.", "error");
+                return;
+            }
+
+            const docRef = getDataDocRef();
+            if (!docRef) return;
+            
+            weeksData = newWeeksData;
+            
+            try {
+                // Save the entire array as a field in a single document
+                await setDoc(docRef, { data: newWeeksData }, { merge: false });
+                console.log("Data successfully written to Firestore.");
+            } catch (e) {
+                console.error("Firestore Save Error:", e);
+                alertMessage("Cloud sync failed. Check console for details.", "error");
+            }
+            // Manual render and stats update is called only on local input change
+            // OnSnapshot handles remote updates automatically.
+            renderWeeks(weeksData); 
+            updateStats(weeksData);
+        }
+
+        /**
+         * Sets up the real-time listener for the data.
+         */
+        function setupDataListener() {
+            if (!isAuthReady || !userId) return;
+
+            const docRef = getDataDocRef();
+            if (!docRef) return;
+            
+            authStatusEl.innerText = "Synchronizing data...";
+
+            // Use onSnapshot for real-time updates
+            onSnapshot(docRef, async (docSnap) => {
+                if (docSnap.exists() && docSnap.data().data) {
+                    // Data exists, load it
+                    weeksData = docSnap.data().data;
+                    console.log("Data received from Firestore.");
+                    authStatusEl.innerText = "Live Sync Active";
+                    authStatusEl.classList.remove('text-zinc-500', 'text-yellow-400');
+                    authStatusEl.classList.add('text-green-400');
+                } else {
+                    // Data doesn't exist, initialize default and save it
+                    console.log("No data found. Initializing default data...");
+                    weeksData = initializeDefaultData();
+                    
+                    // Create the document with default data
+                    await setDoc(docRef, { data: weeksData }, { merge: false });
+                    authStatusEl.innerText = "Data Initialized";
+                    authStatusEl.classList.remove('text-zinc-500', 'text-green-400');
+                    authStatusEl.classList.add('text-yellow-400');
+                }
+
+                // Initial render or update based on received data
+                renderWeeks(weeksData);
+                updateStats(weeksData);
+                
+                // Hide loading indicator and show grid
+                if (loading) loading.classList.add('hidden');
+                if (grid) {
+                    grid.classList.remove('hidden');
+                    grid.classList.add('grid');
+                }
+                lucide.createIcons();
+            }, (error) => {
+                console.error("Firestore Listener Error:", error);
+                authStatusEl.innerText = "Sync Failed (Error)";
+                authStatusEl.classList.remove('text-zinc-500', 'text-green-400', 'text-yellow-400');
+                authStatusEl.classList.add('text-red-600');
+                alertMessage("Could not establish cloud sync. Data is read-only.", "error");
+            });
+        }
+
+
+        // --- Authentication & Setup ---
+        async function initializeFirebaseApp() {
+            // Initialize Firebase
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                authStatusEl.innerText = "App Initialization Failed";
+                return;
+            }
+
+            // Authentication Listener
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    userIdDisplay.innerText = userId;
+                    userIdDisplay.classList.remove('text-zinc-500');
+                    userIdDisplay.classList.add('text-green-400');
+                    authStatusEl.innerText = "Authenticated";
+                    setupDataListener(); // Start listening for data once authenticated
+                } else {
+                    // Should not happen if custom token is provided, but handle fallback
+                    userId = crypto.randomUUID(); // Fallback for data path structure
+                    isAuthReady = true;
+                    userIdDisplay.innerText = "Anonymous User";
+                    authStatusEl.innerText = "Authentication Failed";
+                    alertMessage("Authentication failed. Data may not persist correctly.", "error");
+                    
+                    // Since security rules require authentication, stop here.
+                    loading.classList.remove('hidden');
+                    grid.classList.add('hidden');
+                }
+            });
+
+            // Sign in using custom token or anonymously
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication Error:", error);
+                authStatusEl.innerText = "Auth Token Failed";
+                // Still allow onAuthStateChanged to pick up the anonymous sign-in if it occurred
+            }
+        }
+
+        // --- Rendering Logic & Event Listeners ---
+        
+        function renderWeeks(data) {
+            // Clear and re-render fully only if the data structure or count changes significantly
+            if (grid.children.length === 0 || data.length !== grid.children.length) {
+                grid.innerHTML = data.map(week => createWeekCardHTML(week)).join('');
+                attachEventListeners();
+            } else {
+                // Update existing elements to retain focus
+                data.forEach((week, index) => {
+                    updateWeekCardDOM(week, index);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function createWeekCardHTML(week) {
+            const totalPosts = (week.posts || []).filter(Boolean).length;
+            const totalReels = (week.reels || []).filter(Boolean).length;
+            const progress = Math.round(((totalPosts + totalReels) / 14) * 100);
+
+            return `
+            <div class="relative group p-6 border border-red-900/30 bg-black transition-all duration-300 ease-in-out glow-hover" data-id="${week.id}">
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
+                    <div class="flex-1 w-full">
+                        <input type="text" data-field="regionName" value="${week.regionName || ''}" class="data-input text-xl font-bold bg-transparent text-red-500 w-full focus:outline-none focus:border-b focus:border-red-600 placeholder-red-900/50 uppercase tracking-wider">
+                        <input type="text" data-field="dates" value="${week.dates || ''}" class="data-input text-xs text-red-400/60 bg-transparent w-full focus:outline-none mt-1" placeholder="Dates">
+                    </div>
+                    <div class="flex items-center gap-2 text-red-500/80 font-mono text-xs">
+                        <i data-lucide="activity" class="w-3 h-3"></i>
+                        <span class="week-progress-text">${progress}% DONE</span>
+                    </div>
+                </div>
+
+                <!-- Trackers -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Posts -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-red-500 text-xs font-semibold tracking-widest uppercase">
+                            <span>Daily Posts</span>
+                            <span class="text-red-800 week-posts-count">${totalPosts}/7</span>
+                        </div>
+                        <div class="flex justify-between gap-1">
+                            ${week.posts.map((val, i) => `
+                                <button class="tracker-btn w-8 h-8 rounded-sm flex items-center justify-center transition-all duration-200 bg-zinc-900 border border-zinc-800 hover:border-red-500/50 text-zinc-700 ${val ? 'active' : ''}" data-type="posts" data-index="${i}">
+                                    ${i + 1}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <!-- Reels -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-red-500 text-xs font-semibold tracking-widest uppercase">
+                            <span>Daily Reels</span>
+                            <span class="text-red-800 week-reels-count">${totalReels}/7</span>
+                        </div>
+                        <div class="flex justify-between gap-1">
+                            ${week.reels.map((val, i) => `
+                                <button class="tracker-btn w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-900 border border-zinc-800 hover:border-red-500/50 text-zinc-700 ${val ? 'active' : ''}" data-type="reels" data-index="${i}">
+                                    ${i + 1}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inputs Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <!-- Niches -->
+                        <div class="bg-zinc-950/50 p-3 border-l-2 border-red-900/30">
+                            <div class="flex items-center gap-2 mb-2 text-red-500/80 text-xs uppercase tracking-widest">
+                                <i data-lucide="hash" class="w-3 h-3"></i> Niches
+                            </div>
+                            <div class="space-y-2">
+                                ${(week.niches || ['', '', '']).map((val, i) => `
+                                    <input type="text" data-field="niches" data-index="${i}" value="${val}" class="data-input w-full bg-transparent text-sm text-zinc-300 border-b border-zinc-800 focus:border-red-500 focus:outline-none placeholder-zinc-800 py-1" placeholder="Niche ${i+1}">
+                                `).join('')}
+                            </div>
+                        </div>
+                        <!-- Projects -->
+                        <div class="bg-zinc-950/50 p-3 border-l-2 border-red-900/30">
+                            <div class="flex items-center gap-2 mb-2 text-red-500/80 text-xs uppercase tracking-widest">
+                                <i data-lucide="link" class="w-3 h-3"></i> Projects
+                            </div>
+                            <div class="space-y-3">
+                                ${(week.projects || [{name:'',link:''},{name:'',link:''},{name:'',link:''}]).map((p, i) => `
+                                    <div class="flex gap-2">
+                                        <input type="text" data-field="projects" data-sub="name" data-index="${i}" value="${p.name}" class="data-input flex-1 bg-transparent text-sm text-zinc-300 border-b border-zinc-800 focus:border-red-500 focus:outline-none placeholder-zinc-800 py-1" placeholder="Project Name">
+                                        <input type="text" data-field="projects" data-sub="link" data-index="${i}" value="${p.link}" class="data-input w-1/3 bg-transparent text-xs text-red-400 border-b border-zinc-800 focus:border-red-500 focus:outline-none placeholder-zinc-800 py-1" placeholder="URL">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-red-500/80 text-xs uppercase tracking-widest mb-1">Outreach</label>
+                                <textarea data-field="outreach" class="data-input w-full bg-zinc-950 text-zinc-300 text-sm p-2 border border-zinc-900 focus:border-red-900 focus:outline-none resize-none h-20">${week.outreach || ''}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-red-500/80 text-xs uppercase tracking-widest mb-1">Results</label>
+                                <textarea data-field="results" class="data-input w-full bg-zinc-950 text-zinc-300 text-sm p-2 border border-zinc-900 focus:border-red-900 focus:outline-none resize-none h-20">${week.results || ''}</textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 text-red-500/80 text-xs uppercase tracking-widest mb-1">
+                                <i data-lucide="message-square" class="w-3 h-3"></i> Engagement
+                            </label>
+                            <input type="text" data-field="engagement" value="${week.engagement || ''}" class="data-input w-full bg-zinc-950 text-zinc-300 text-sm p-2 border border-zinc-900 focus:border-red-900 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 text-red-500/80 text-xs uppercase tracking-widest mb-1">
+                                <i data-lucide="eye" class="w-3 h-3"></i> Observations
+                            </label>
+                            <textarea data-field="observations" class="data-input w-full bg-zinc-950 text-zinc-300 text-sm p-2 border border-zinc-900 focus:border-red-900 focus:outline-none resize-none h-16">${week.observations || ''}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        function updateWeekCardDOM(week, index) {
+            const card = grid.children[index];
+            if (!card) return;
+
+            // Helper to update input/textarea if not focused
+            const safeUpdate = (selector, val) => {
+                const el = card.querySelector(selector);
+                if (el && document.activeElement !== el) {
+                    el.value = val || '';
+                }
+            };
+
+            safeUpdate('[data-field="regionName"]', week.regionName);
+            safeUpdate('[data-field="dates"]', week.dates);
+            safeUpdate('[data-field="outreach"]', week.outreach);
+            safeUpdate('[data-field="results"]', week.results);
+            safeUpdate('[data-field="engagement"]', week.engagement);
+            safeUpdate('[data-field="observations"]', week.observations);
+
+            // Niches
+            (week.niches || []).forEach((val, i) => {
+                safeUpdate(`[data-field="niches"][data-index="${i}"]`, val);
+            });
+
+            // Projects
+            (week.projects || []).forEach((p, i) => {
+                safeUpdate(`[data-field="projects"][data-sub="name"][data-index="${i}"]`, p.name);
+                safeUpdate(`[data-field="projects"][data-sub="link"][data-index="${i}"]`, p.link);
+            });
+
+            // Buttons & Stats
+            const postsBtns = card.querySelectorAll('[data-type="posts"]');
+            week.posts.forEach((active, i) => {
+                const btn = postsBtns[i];
+                if (!btn) return;
+                if (active) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            const reelsBtns = card.querySelectorAll('[data-type="reels"]');
+            week.reels.forEach((active, i) => {
+                const btn = reelsBtns[i];
+                if (!btn) return;
+                if (active) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            const totalPosts = (week.posts || []).filter(Boolean).length;
+            const totalReels = (week.reels || []).filter(Boolean).length;
+            const progress = Math.round(((totalPosts + totalReels) / 14) * 100);
+
+            card.querySelector('.week-posts-count').innerText = `${totalPosts}/7`;
+            card.querySelector('.week-reels-count').innerText = `${totalReels}/7`;
+            card.querySelector('.week-progress-text').innerText = `${progress}% DONE`;
+        }
+
+        function attachEventListeners() {
+            grid.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tracker-btn');
+                if (btn) {
+                    const card = btn.closest('[data-id]');
+                    const weekId = card.dataset.id;
+                    const type = btn.dataset.type; // posts or reels
+                    const idx = parseInt(btn.dataset.index);
+                    
+                    const weekIndex = weeksData.findIndex(w => w.id === weekId);
+                    if (weekIndex !== -1) {
+                        // Use a deep copy for immutable update pattern
+                        const newWeeksData = JSON.parse(JSON.stringify(weeksData));
+                        const newArray = [...newWeeksData[weekIndex][type]];
+                        newArray[idx] = newArray[idx] ? 0 : 1; // Toggle value
+                        
+                        newWeeksData[weekIndex][type] = newArray;
+
+                        // Save the full array back via Firestore
+                        saveWeeksData(newWeeksData);
+                    }
+                }
+            });
+
+            grid.addEventListener('input', (e) => {
+                const input = e.target;
+                if (input.classList.contains('data-input')) {
+                    const card = input.closest('[data-id]');
+                    const weekId = card.dataset.id;
+                    const field = input.dataset.field;
+                    const weekIndex = weeksData.findIndex(w => w.id === weekId);
+                    
+                    if (weekIndex === -1) return;
+
+                    // Create a deep copy of the array to modify
+                    const newWeeksData = JSON.parse(JSON.stringify(weeksData));
+                    let weekToUpdate = newWeeksData[weekIndex];
+
+                    if (field === 'niches') {
+                        const idx = parseInt(input.dataset.index);
+                        weekToUpdate.niches[idx] = input.value;
+                    } else if (field === 'projects') {
+                        const idx = parseInt(input.dataset.index);
+                        const sub = input.dataset.sub;
+                        weekToUpdate.projects[idx][sub] = input.value;
+                    } else {
+                        weekToUpdate[field] = input.value;
+                    }
+
+                    // Save the full array back via Firestore
+                    saveWeeksData(newWeeksData);
+                }
+            });
+        }
+        
+        // Stats calculation logic remains the same
+        function updateStats(data) {
+            const totalPosts = data.reduce((acc, w) => acc + (w.posts?.filter(Boolean).length || 0), 0);
+            const totalReels = data.reduce((acc, w) => acc + (w.reels?.filter(Boolean).length || 0), 0);
+            const totalPossible = data.length * 7 * 2;
+            const global = totalPossible > 0 ? Math.round(((totalPosts + totalReels) / totalPossible) * 100) : 0;
+
+            totalPostsEl.innerText = totalPosts;
+            totalReelsEl.innerText = totalReels;
+            globalProgressEl.innerText = global;
+            progressBarFill.style.width = `${global}%`;
+        }
+
+        // --- Initialization ---
+        window.onload = function() {
+            setupLogoLogic();
+            initializeFirebaseApp();
+        };
+    </script>
+</body>
+</html>
